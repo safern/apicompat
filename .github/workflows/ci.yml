@@ -1,25 +1,31 @@
 name: apicompat-ci
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
-  strategy:
-    matrix:
-      configuration: ['Release', 'Debug']
-  name: Ubuntu x64 ${{ matrix.configuration }}
-  runs-on: ubuntu-latest
+    name: Ubuntu_x64
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        configuration: ['Release', 'Debug']
 
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    
-    - name: Install .NET SDK
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '5.0.x'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '5.0.x'
 
-    - name: Build
-      run: dotnet build -c ${{ matrix.configuration }}
-    - name: Test
-      run: dotnet test --no-build --verbosity normal -c ${{ matrix.configuration }}
+      - name: Build
+        run: dotnet build -c ${{ matrix.configuration }}
+      - name: Test
+        run: dotnet test --no-build --verbosity normal -c ${{ matrix.configuration }}
