@@ -1,16 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net5.0</TargetFrameworks>
+    <TargetFramework>net5.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Microsoft.DotNet.ApiCompatibility.Tasks\Microsoft.DotNet.ApiCompatibility.Tasks.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.ApiCompatibility\Microsoft.DotNet.ApiCompatibility.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Build" Version="16.8.0" />
+    <PackageReference Include="Microsoft.Build.Framework" Version="16.8.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="xunit" Version="2.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />

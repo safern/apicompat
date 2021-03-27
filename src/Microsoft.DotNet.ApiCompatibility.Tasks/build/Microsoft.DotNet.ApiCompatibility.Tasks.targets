@@ -1,0 +1,30 @@
+<Project>
+  <UsingTask TaskName="ApiCompatibility" AssemblyFile="$(DotNetApiCompatibilityTasksAssembly)" />
+
+  <Target Name="ApiCompat"
+          AfterTargets="Build">
+
+    <ItemGroup>
+      <RightDirectories Include="$(OutputPath)" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <IncludeInternalSymbols Condition="'$(IncludeInternalSymbols)' == ''">false</IncludeInternalSymbols>
+      <RoslynPath>$([MSBuild]::NormalizeDirectory($([System.IO.Path]::GetDirectoryName('$(CSharpCoreTargetsPath)')), 'bincore'))</RoslynPath>
+      <ShouldResolveAssemblyReferences Condition="'$(ShouldResolveAssemblyReferences)' == ''">false</ShouldResolveAssemblyReferences>
+    </PropertyGroup>
+
+    <ApiCompatibility
+      RoslynPath="$(RoslynPath)"
+      LeftPaths="@(LeftBinaries)"
+      LeftSourcesPath="@(LeftSourcesPath)"
+      LeftName="$(LeftName)"
+      RightDependsOn="@(Reference)"
+      RightDirectories="@(RightDirectories)"
+      RightName="$(RigthName)"
+      AssemblyName="$(AssemblyName)"
+      IncludeInternals="$(IncludeInternalSymbols)"
+      ShouldResolveAssemblyReferences="$(ShouldResolveAssemblyReferences)"
+      NoWarn="$(NoWarn)" />
+  </Target>
+</Project>

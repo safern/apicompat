@@ -8,40 +8,40 @@ namespace Microsoft.DotNet.ApiCompatibility.Tests
 {
     internal static class SymbolFactory
     {
-        internal static IAssemblySymbol GetAssemblyFromSyntax(string syntax, bool enableNullable = false, [CallerMemberName] string assemblyName = "")
+        internal static IAssemblySymbol GetAssemblyFromSyntax(string syntax, bool enableNullable = false, bool includeDefaultReferences = false, [CallerMemberName] string assemblyName = "")
         {
-            CSharpCompilation compilation = CreateCSharpCompilationFromSyntax(syntax, assemblyName, enableNullable);
+            CSharpCompilation compilation = CreateCSharpCompilationFromSyntax(syntax, assemblyName, enableNullable, includeDefaultReferences);
             return compilation.Assembly;
         }
 
-        internal static IAssemblySymbol GetAssemblyFromSyntaxWithReferences(string syntax, IEnumerable<string> referencesSyntax, bool enableNullable = false, [CallerMemberName] string assemblyName = "")
+        internal static IAssemblySymbol GetAssemblyFromSyntaxWithReferences(string syntax, IEnumerable<string> referencesSyntax, bool enableNullable = false, bool includeDefaultReferences = false, [CallerMemberName] string assemblyName = "")
         {
-            CSharpCompilation compilation = CreateCSharpCompilationFromSyntax(syntax, assemblyName, enableNullable);
-            CSharpCompilation compilationWithReferences = CreateCSharpCompilationFromSyntax(referencesSyntax, $"{assemblyName}_reference", enableNullable);
+            CSharpCompilation compilation = CreateCSharpCompilationFromSyntax(syntax, assemblyName, enableNullable, includeDefaultReferences);
+            CSharpCompilation compilationWithReferences = CreateCSharpCompilationFromSyntax(referencesSyntax, $"{assemblyName}_reference", enableNullable, includeDefaultReferences);
 
             compilation = compilation.AddReferences(compilationWithReferences.ToMetadataReference());
             return compilation.Assembly;
         }
 
-        private static CSharpCompilation CreateCSharpCompilationFromSyntax(string syntax, string name, bool enableNullable)
+        private static CSharpCompilation CreateCSharpCompilationFromSyntax(string syntax, string name, bool enableNullable, bool includeDefaultReferences)
         {
-            CSharpCompilation compilation = CreateCSharpCompilation(name, enableNullable);
+            CSharpCompilation compilation = CreateCSharpCompilation(name, enableNullable, includeDefaultReferences);
             return compilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(syntax));
         }
 
-        private static CSharpCompilation CreateCSharpCompilationFromSyntax(IEnumerable<string> syntax, string name, bool enableNullable)
+        private static CSharpCompilation CreateCSharpCompilationFromSyntax(IEnumerable<string> syntax, string name, bool enableNullable, bool includeDefaultReferences)
         {
-            CSharpCompilation compilation = CreateCSharpCompilation(name, enableNullable);
+            CSharpCompilation compilation = CreateCSharpCompilation(name, enableNullable, includeDefaultReferences);
             IEnumerable<SyntaxTree> syntaxTrees = syntax.Select(s => CSharpSyntaxTree.ParseText(s));
             return compilation.AddSyntaxTrees(syntaxTrees);
         }
 
-        private static CSharpCompilation CreateCSharpCompilation(string name, bool enableNullable)
+        private static CSharpCompilation CreateCSharpCompilation(string name, bool enableNullable, bool includeDefaultReferences)
         {
             var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
                                                                   nullableContextOptions: enableNullable ? NullableContextOptions.Enable : NullableContextOptions.Disable);
 
-            return CSharpCompilation.Create(name, options: compilationOptions, references: DefaultReferences);
+            return CSharpCompilation.Create(name, options: compilationOptions, references: includeDefaultReferences ? DefaultReferences : null);
         }
 
         private static IEnumerable<MetadataReference> DefaultReferences { get; } = new[]

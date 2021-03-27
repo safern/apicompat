@@ -13,18 +13,27 @@ namespace Microsoft.DotNet.ApiCompatibility
     {
         private readonly HashSet<string> _dependencyDirectories = new();
         private readonly Dictionary<string, MetadataReference> _loadedAssemblies;
+        private readonly bool _resolveReferences;
         private CSharpCompilation _cSharpCompilation;
 
-        public AssemblyLoader()
+        public AssemblyLoader(string assemblyName = "", bool resolveAssemblyReferences = false)
         {
+            if (string.IsNullOrEmpty(assemblyName))
+            {
+                assemblyName = $"AssemblyLoader_{DateTime.Now:MM_dd_yy_HH_mm_ss_FFF}";
+            }
+
             _loadedAssemblies = new Dictionary<string, MetadataReference>();
             var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable);
-            _cSharpCompilation = CSharpCompilation.Create($"AssemblyLoader_{DateTime.Now:MM_dd_yy_HH_mm_ss_FFF}", options: compilationOptions);
+            _cSharpCompilation = CSharpCompilation.Create(assemblyName, options: compilationOptions);
+            _resolveReferences = resolveAssemblyReferences;
         }
 
-        public void AddDependencyPath(string paths)
+        public void AddDependencyPaths(string paths) => AddDependencyPaths(SplitPaths(paths));
+
+        public void AddDependencyPaths(IEnumerable<string> paths)
         {
-            foreach (string path in SplitPaths(paths))
+            foreach (string path in paths)
                 _dependencyDirectories.Add(path);
         }
 
@@ -37,16 +46,11 @@ namespace Microsoft.DotNet.ApiCompatibility
         private static string[] SplitPaths(string paths) =>
             paths == null ? Array.Empty<string>() : paths.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
 
-        public IEnumerable<IAssemblySymbol> LoadAssemblies(string paths)
+        public IEnumerable<IAssemblySymbol> LoadAssemblies(string paths) => LoadAssemblies(SplitPaths(paths));
+
+        public IEnumerable<IAssemblySymbol> LoadAssemblies(IEnumerable<string> paths)
         {
-            string[] assemblyPaths = SplitPaths(paths);
-
-            if (assemblyPaths.Length == 0)
-            {
-                return Array.Empty<IAssemblySymbol>();
-            }
-
-            IEnumerable<MetadataReference> assembliesToReturn = LoadFromPaths(assemblyPaths);
+            IEnumerable<MetadataReference> assembliesToReturn = LoadFromPaths(paths);
 
             List<IAssemblySymbol> result = new List<IAssemblySymbol>();
             foreach (MetadataReference assembly in assembliesToReturn)
@@ -60,8 +64,32 @@ namespace Microsoft.DotNet.ApiCompatibility
 
             return result;
         }
+        
+        public IAssemblySymbol LoadAssemblyFromFiles(IEnumerable<string> filePaths, IEnumerable<string> referencePaths)
+        {
+            if (filePaths == null || filePaths.Count() == 0)
+            {
+                throw new ArgumentNullException(nameof(filePaths), $"Should not be null and contain at least one element");
+            }
 
-        public IEnumerable<IAssemblySymbol> LoadMatchingAssemblies(IEnumerable<IAssemblySymbol> fromAssemblies, IEnumerable<string> searchPaths)
+            List<SyntaxTree> syntaxTrees = new();
+            foreach (string filePath in filePaths)
+            {
+                if (!File.Exists(filePath))
+                {
+                    throw new ArgumentException($"File '{filePath}' does not exist.");
+                }
+
+                syntaxTrees.Add(CSharpSyntaxTree.ParseText(File.ReadAllText(filePath)));
+            }
+
+            _cSharpCompilation = _cSharpCompilation.AddSyntaxTrees(syntaxTrees);
+
+            LoadFromPaths(referencePaths);
+            return _cSharpCompilation.Assembly;
+        }
+
+        public IEnumerable<IAssemblySymbol> LoadMatchingAssemblies(IEnumerable<IAssemblySymbol> fromAssemblies, IEnumerable<string> searchPaths, bool validateMatchingIdentity = true, bool warnOnMissingAssemblies = true)
         {
             List<IAssemblySymbol> matchingAssemblies = new List<IAssemblySymbol>();
             foreach (IAssemblySymbol assembly in fromAssemblies)
@@ -72,7 +100,7 @@ namespace Microsoft.DotNet.ApiCompatibility
                 {
                     if (!Directory.Exists(directory))
                     {
-                        throw new ArgumentException($"Directory '{directory}' does not exist", nameof(searchPaths));
+                        throw new ArgumentException($"Matching assembly search directory '{directory}' does not exist", nameof(searchPaths));
                     }
 
                     string possiblePath = Path.Combine(directory, name);
@@ -82,14 +110,13 @@ namespace Microsoft.DotNet.ApiCompatibility
                         ISymbol symbol = _cSharpCompilation.GetAssemblyOrModuleSymbol(reference);
                         if (symbol is IAssemblySymbol matchingAssembly)
                         {
-                            if (!matchingAssembly.Identity.Equals(assembly.Identity))
+                            if (validateMatchingIdentity && !matchingAssembly.Identity.Equals(assembly.Identity))
                             {
                                 _cSharpCompilation = _cSharpCompilation.RemoveReferences(new[] { reference });
                                 _loadedAssemblies.Remove(name);
                                 continue;
                             }
 
-                            // TODO: version and pkt check
                             matchingAssemblies.Add(matchingAssembly);
                             found = true;
                             break;
@@ -149,7 +176,10 @@ namespace Microsoft.DotNet.ApiCompatibility
             MetadataReference metadataReference = MetadataReference.CreateFromFile(assemblyPath);
             _loadedAssemblies.Add(name, metadataReference);
             _cSharpCompilation = _cSharpCompilation.AddReferences(new MetadataReference[] { metadataReference });
-            ResolveReferences(assemblyPath);
+
+            if (_resolveReferences)
+                ResolveReferences(assemblyPath);
+
             return metadataReference;
         }
 
@@ -177,7 +207,7 @@ namespace Microsoft.DotNet.ApiCompatibility
                 }
             }
 
-            // TODO: log error, couldn't resolve reference
+            // TODO: log error, couldn't resolve reference should accept an option to ignore missing references.
         }
     }
 }

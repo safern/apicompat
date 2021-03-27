@@ -20,11 +20,15 @@
             {
                 Visit(typeMapper);
             }
+            else if (mapper is MemberMapper memberMapper)
+            {
+                Visit(memberMapper);
+            }
         }
 
         public virtual void Visit(AssemblySetMapper mapper)
         {
-            foreach (AssemblyMapper assembly in mapper.Assemblies)
+            foreach (AssemblyMapper assembly in mapper.GetAssemblies())
             {
                 Visit(assembly);
             }
@@ -32,7 +36,7 @@
 
         public virtual void Visit(AssemblyMapper mapper)
         {
-            foreach (NamespaceMapper nsMapper in mapper.Namespaces)
+            foreach (NamespaceMapper nsMapper in mapper.GetNamespaces())
             {
                 Visit(nsMapper);
             }
@@ -40,12 +44,25 @@
 
         public virtual void Visit(NamespaceMapper mapper)
         {
-            foreach (TypeMapper type in mapper.Types)
+            foreach (TypeMapper type in mapper.GetTypes())
             {
                 Visit(type);
             }
         }
 
-        public virtual void Visit(TypeMapper mapper) { }
+        public virtual void Visit(TypeMapper mapper)
+        {
+            foreach (TypeMapper type in mapper.GetNestedTypes())
+            {
+                Visit(type);
+            }
+
+            foreach (MemberMapper member in mapper.GetMembers())
+            {
+                Visit(member);
+            }
+        }
+
+        public virtual void Visit(MemberMapper mapper) { }
     }
 }

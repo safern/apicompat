@@ -13,15 +13,47 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 
         public NamespaceMapper(DiffingSettings settings) : base(settings) { }
 
-        public IEnumerable<TypeMapper> Types
+        public IEnumerable<TypeMapper> GetTypes()
         {
-            get
+            if (_types == null)
             {
-                if (_types == null)
-                    ExpandTree();
+                _types = new Dictionary<string, TypeMapper>();
+                IEnumerable<ITypeSymbol> types;
 
-                return _types.Values;
+                if (Left != null)
+                {
+                    types = Left.GetTypeMembers().AddRange(_leftForwardedTypes);
+                    AddOrCreateMappers(0);
+                }
+
+                if (Right != null)
+                {
+                    types = Right.GetTypeMembers().AddRange(_rightForwardedTypes);
+                    AddOrCreateMappers(1);
+                }
+
+                void AddOrCreateMappers(int index)
+                {
+                    if (types == null)
+                        return;
+
+                    foreach (var type in types)
+                    {
+                        if (Settings.Filter.Include(type))
+                        {
+                            if (!_types.TryGetValue(type.Name, out TypeMapper mapper))
+                            {
+                                mapper = new TypeMapper(Settings);
+                                _types.Add(type.Name, mapper);
+                            }
+
+                            mapper.AddElement(type, index);
+                        }
+                    }
+                }
             }
+
+            return _types.Values;
         }
 
         public void AddForwardedTypes(IEnumerable<INamedTypeSymbol> forwardedTypes, int index)
@@ -36,44 +68,6 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
             else
             {
                 _rightForwardedTypes = forwardedTypes;
-            }
-        }
-
-        private void ExpandTree()
-        {
-            _types = new Dictionary<string, TypeMapper>();
-            IEnumerable<ITypeSymbol> types;
-
-            if (Left != null)
-            {
-                types = Left.GetTypeMembers().AddRange(_leftForwardedTypes);
-                AddOrCreateMappers(0);
-            }
-
-            if (Right != null)
-            {
-                types = Right.GetTypeMembers().AddRange(_rightForwardedTypes);
-                AddOrCreateMappers(1);
-            }
-
-            void AddOrCreateMappers(int index)
-            {
-                if (types == null)
-                    return;
-
-                foreach (var type in types)
-                {
-                    if (Settings.Filter.Include(type))
-                    {
-                        if (!_types.TryGetValue(type.Name, out TypeMapper mapper))
-                        {
-                            mapper = new TypeMapper(Settings);
-                            _types.Add(type.Name, mapper);
-                        }
-
-                        mapper.AddElement(type, index);
-                    }
-                }
             }
         }
     }
