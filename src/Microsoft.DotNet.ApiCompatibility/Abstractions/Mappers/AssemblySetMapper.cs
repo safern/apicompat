@@ -11,43 +11,37 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 
         public AssemblySetMapper(DiffingSettings settings) : base(settings) { }
 
-        public IEnumerable<AssemblyMapper> Assemblies
+        public IEnumerable<AssemblyMapper> GetAssemblies()
         {
-            get
+            if (_assemblies == null)
             {
-                if (_assemblies == null)
-                    ExpandTree();
+                _assemblies = new Dictionary<string, AssemblyMapper>();
 
-                return _assemblies.Values;
-            }
-        }
-
-        private void ExpandTree()
-        {
-            _assemblies = new Dictionary<string, AssemblyMapper>();
-
-            if (Left != null)
-            {
-                AddOrCreateMappers(Left, 0);
-            }
-
-            if (Right != null)
-            {
-                AddOrCreateMappers(Right, 1);
-            }
-
-            void AddOrCreateMappers(IEnumerable<IAssemblySymbol> elements, int index)
-            {
-                foreach (IAssemblySymbol assembly in elements)
+                if (Left != null)
                 {
-                    if (!_assemblies.TryGetValue(assembly.Name, out AssemblyMapper mapper))
+                    AddOrCreateMappers(Left, 0);
+                }
+
+                if (Right != null)
+                {
+                    AddOrCreateMappers(Right, 1);
+                }
+
+                void AddOrCreateMappers(IEnumerable<IAssemblySymbol> elements, int index)
+                {
+                    foreach (IAssemblySymbol assembly in elements)
                     {
-                        mapper = new AssemblyMapper(Settings);
-                        _assemblies.Add(assembly.Name, mapper);
+                        if (!_assemblies.TryGetValue(assembly.Name, out AssemblyMapper mapper))
+                        {
+                            mapper = new AssemblyMapper(Settings);
+                            _assemblies.Add(assembly.Name, mapper);
+                        }
+                        mapper.AddElement(assembly, index);
                     }
-                    mapper.AddElement(assembly, index);
                 }
             }
+
+            return _assemblies.Values;
         }
     }
 }

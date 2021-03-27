@@ -22,6 +22,16 @@ namespace Microsoft.DotNet.ApiCompatibility
         public override void Visit(TypeMapper type)
         {
             _differenceBag.AddRange(type.GetDifferences());
+
+            if (type.ShouldDiffMembers)
+            {
+                base.Visit(type);
+            }
+        }
+
+        public override void Visit(MemberMapper member)
+        {
+            _differenceBag.AddRange(member.GetDifferences());
         }
 
         public IEnumerable<CompatDifference> Differences => _differenceBag.Differences;

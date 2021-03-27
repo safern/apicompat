@@ -33,5 +33,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 
         public override int GetHashCode() =>
             HashCode.Combine(MemberId, Id, Message, Type);
+
+        public override string ToString() => $"{Id} : {Message}";
     }
 }

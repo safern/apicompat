@@ -42,29 +42,41 @@ namespace Microsoft.DotNet.ApiCompatibility.Rules
             List<CompatDifference> differences = new();
             if (mapper is AssemblyMapper am)
             {
-                Run(am.Left, am.Right, differences);
+                Run(am, differences);
             }
             if (mapper is TypeMapper tm)
             {
-                Run(tm.Left, tm.Right, differences);
+                Run(tm, differences);
+            }
+            if (mapper is MemberMapper mm)
+            {
+                Run(mm, differences);
             }
 
             return differences;
         }
 
-        private void Run(IAssemblySymbol left, IAssemblySymbol right, List<CompatDifference> difference)
+        private void Run(AssemblyMapper mapper, List<CompatDifference> differences)
         {
             foreach (Rule rule in _rules)
             {
-                rule.Run(left, right, difference);
+                rule.Run(mapper, differences);
             }
         }
 
-        private void Run(ITypeSymbol left, ITypeSymbol right, List<CompatDifference> difference)
+        private void Run(TypeMapper mapper, List<CompatDifference> differences)
         {
             foreach (Rule rule in _rules)
             {
-                rule.Run(left, right, difference);
+                rule.Run(mapper, differences);
+            }
+        }
+
+        private void Run(MemberMapper mapper, List<CompatDifference> differences)
+        {
+            foreach (Rule rule in _rules)
+            {
+                rule.Run(mapper, differences);
             }
         }
 
