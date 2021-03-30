@@ -3,12 +3,12 @@ using System;
 
 namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 {
-    public class CompatDifference : IEquatable<CompatDifference>
+    public class CompatDifference : IDiagnostic, IEquatable<CompatDifference>
     {
-        public string Id { get; }
+        public string DiagnosticId { get; }
         public DifferenceType Type { get; }
         public virtual string Message { get; }
-        public string MemberId { get; }
+        public string ReferenceId { get; }
 
         private CompatDifference() { }
 
@@ -19,21 +19,21 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 
         public CompatDifference(string id, string message, DifferenceType type, string memberId)
         {
-            Id = id;
+            DiagnosticId = id;
             Message = message;
             Type = type;
-            MemberId = memberId;
+            ReferenceId = memberId;
         }
 
         public bool Equals(CompatDifference other) => 
             Type == other.Type &&
-            Id.Equals(other.Id, StringComparison.OrdinalIgnoreCase) &&
-            MemberId.Equals(other.MemberId, StringComparison.OrdinalIgnoreCase) &&
+            DiagnosticId.Equals(other.DiagnosticId, StringComparison.OrdinalIgnoreCase) &&
+            ReferenceId.Equals(other.ReferenceId, StringComparison.OrdinalIgnoreCase) &&
             Message.Equals(other.Message, StringComparison.OrdinalIgnoreCase);
 
         public override int GetHashCode() =>
-            HashCode.Combine(MemberId, Id, Message, Type);
+            HashCode.Combine(ReferenceId, DiagnosticId, Message, Type);
 
-        public override string ToString() => $"{Id} : {Message}";
+        public override string ToString() => $"{DiagnosticId} : {Message}";
     }
 }
