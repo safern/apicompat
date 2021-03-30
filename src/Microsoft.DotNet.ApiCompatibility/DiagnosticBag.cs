@@ -5,19 +5,19 @@ using System.Collections.Generic;
 
 namespace Microsoft.DotNet.ApiCompatibility
 {
-    internal class DifferenceBag
+    public class DiagnosticBag<T> where T : IDiagnostic
     {
         private readonly Dictionary<string, HashSet<string>> _ignore;
         private readonly HashSet<string> _noWarn;
 
-        private readonly List<CompatDifference> _differences = new List<CompatDifference>();
+        private readonly List<T> _differences = new();
 
-        internal DifferenceBag(string noWarn, (string diagId, string memberId)[] ignoredDifferences)
+        public DiagnosticBag(string noWarn, (string diagnosticId, string referenceId)[] ignoredDifferences)
         {
             _noWarn = new HashSet<string>(noWarn?.Split(';'));
             _ignore = new Dictionary<string, HashSet<string>>();
 
-            foreach ((string diagnosticId, string memberId) ignored in ignoredDifferences)
+            foreach (var ignored in ignoredDifferences)
             {
                 if (!_ignore.TryGetValue(ignored.diagnosticId, out HashSet<string> members))
                 {
@@ -25,24 +25,24 @@ namespace Microsoft.DotNet.ApiCompatibility
                     _ignore.Add(ignored.diagnosticId, members);
                 }
 
-                members.Add(ignored.memberId);
+                members.Add(ignored.referenceId);
             }
         }
 
-        internal void AddRange(IEnumerable<CompatDifference> differences)
+        public void AddRange(IEnumerable<T> differences)
         {
-            foreach (CompatDifference difference in differences)
+            foreach (T difference in differences)
                 Add(difference);
         }
 
-        internal void Add(CompatDifference difference)
+        public void Add(T difference)
         {
-            if (_noWarn.Contains(difference.Id))
+            if (_noWarn.Contains(difference.DiagnosticId))
                 return;
 
-            if (_ignore.TryGetValue(difference.Id, out HashSet<string> members))
+            if (_ignore.TryGetValue(difference.DiagnosticId, out HashSet<string> members))
             {
-                if (members.Contains(difference.MemberId))
+                if (members.Contains(difference.ReferenceId))
                 {
                     return;
                 }
@@ -51,6 +51,6 @@ namespace Microsoft.DotNet.ApiCompatibility
             _differences.Add(difference);
         }
 
-        internal IEnumerable<CompatDifference> Differences => _differences;
+        public IEnumerable<T> Differences => _differences;
     }
 }

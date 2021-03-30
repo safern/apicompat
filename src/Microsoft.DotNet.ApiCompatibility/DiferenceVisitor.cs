@@ -6,11 +6,11 @@ namespace Microsoft.DotNet.ApiCompatibility
 {
     public class DiferenceVisitor : MapperVisitor
     {
-        private readonly DifferenceBag _differenceBag;
+        private readonly DiagnosticBag<CompatDifference> _differenceBag;
 
         public DiferenceVisitor(string noWarn = null, (string diagnosticId, string memberId)[] ignoredDifferences = null)
         {
-            _differenceBag = new DifferenceBag(noWarn ?? string.Empty, ignoredDifferences ?? Array.Empty<(string, string)>());
+            _differenceBag = new DiagnosticBag<CompatDifference>(noWarn ?? string.Empty, ignoredDifferences ?? Array.Empty<(string, string)>());
         }
 
         public override void Visit(AssemblyMapper assembly)
