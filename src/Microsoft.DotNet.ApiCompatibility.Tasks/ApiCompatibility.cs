@@ -34,7 +34,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Tasks
                 string filePath = Path.Combine(RoslynPath, name.Name + ".dll");
                 if (File.Exists(filePath))
                     return Assembly.LoadFrom(filePath);
-;            }
+            }
 
             return null;
         }
