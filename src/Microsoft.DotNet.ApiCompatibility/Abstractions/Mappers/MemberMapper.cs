@@ -8,7 +8,5 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
     public class MemberMapper : ElementMapper<ISymbol>
     {
         public MemberMapper(DiffingSettings settings) : base(settings) { }
-
-        public ISymbol Representative => Left != null ? Left : Right;
     }
 }

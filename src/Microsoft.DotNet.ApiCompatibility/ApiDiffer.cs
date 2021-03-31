@@ -34,20 +34,5 @@ namespace Microsoft.DotNet.ApiCompatibility
             visitor.Visit(mapper);
             return visitor.Differences;
         }
-
-        public IEnumerable<CompatDifference> GetDifferences(IEnumerable<INamespaceSymbol> left, IEnumerable<IAssemblySymbol> right)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<CompatDifference> GetDifferences(IEnumerable<IAssemblySymbol> left, IEnumerable<INamespaceSymbol> right)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<CompatDifference> GetDifferences(IEnumerable<INamespaceSymbol> left, IEnumerable<INamespaceSymbol> right)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

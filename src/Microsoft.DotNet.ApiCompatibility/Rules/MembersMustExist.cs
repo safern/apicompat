@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.DotNet.ApiCompatibility.Abstractions;
+using Microsoft.DotNet.ApiCompatibility.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -30,11 +31,58 @@ namespace Microsoft.DotNet.ApiCompatibility.Rules
                     if (method.MethodKind == MethodKind.ExplicitInterfaceImplementation)
                         return;
 
-                    // TODO: handle overriden or methods promoted to a base type? 
+                    // If method is an override or hides a base type definition removing it from right is compatible.
+                    if (method.IsOverride || FindMatchingOnBaseType(method))
+                        return;
                 }
 
                 differences.Add(new CompatDifference(DiagnosticIds.MemberMustExist, $"Member '{left.ToDisplayString()}' exists on the contract but not on the implementation", DifferenceType.Removed, left));
             }
+        }
+
+        private bool FindMatchingOnBaseType(IMethodSymbol method)
+        {
+            foreach (ITypeSymbol type in method.ContainingType.GetAllBaseTypes())
+            {
+                foreach (ISymbol symbol in type.GetMembers())
+                {
+                    if (symbol is IMethodSymbol candidate && IsMatchingMethod(method, candidate))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsMatchingMethod(IMethodSymbol method, IMethodSymbol candidate)
+        {
+            if (method.Name == candidate.Name)
+            {
+                if (ParametersMatch(method, candidate) && ReturnTypesMatch(method, candidate))
+                {
+                    if (method.TypeParameters.Length == candidate.TypeParameters.Length)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool ReturnTypesMatch(IMethodSymbol method, IMethodSymbol candidate) =>
+            method.ReturnType.ToDisplayString() == candidate.ReturnType.ToDisplayString();
+
+        private bool ParametersMatch(IMethodSymbol method, IMethodSymbol candidate)
+        {
+            if (method.Parameters.Length != candidate.Parameters.Length)
+                return false;
+
+            for (int i = 0; i < method.Parameters.Length; i++)
+            {
+                if (method.Parameters[i].Type.ToDisplayString() != method.Parameters[i].Type.ToDisplayString())
+                    return false;
+            }
+
+            return true;
         }
     }
 }
