@@ -82,7 +82,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Tasks
             IEnumerable<IAssemblySymbol> leftSymbols;
             HashSet<string> rightDependsOnDirs = new HashSet<string>();
 
-            if (RightDependsOn != null)
+            if (ShouldResolveAssemblyReferences && RightDependsOn != null)
             {
                 foreach (string dependency in RightDependsOn)
                 {
@@ -101,7 +101,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Tasks
             if (LeftPaths != null)
             {
                 leftLoader = new AssemblyLoader(resolveAssemblyReferences: ShouldResolveAssemblyReferences);
-                leftLoader.AddDependencyPaths(rightDependsOnDirs);
+                leftLoader.AddReferenceSearchDirectories(rightDependsOnDirs);
                 leftSymbols = leftLoader.LoadAssemblies(LeftPaths);
             }
             else
@@ -115,7 +115,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Tasks
             }
 
             AssemblyLoader rightLoader = new(resolveAssemblyReferences: ShouldResolveAssemblyReferences);
-            rightLoader.AddDependencyPaths(RightDependsOn ?? Array.Empty<string>());
+            rightLoader.AddReferenceSearchDirectories(RightDependsOn ?? Array.Empty<string>());
             IEnumerable<IAssemblySymbol> rightSymbols = rightLoader.LoadMatchingAssemblies(leftSymbols, RightDirectories, validateMatchingIdentity: ValidateMatchingAssemblyIdentities);
 
             ApiDiffer differ = new(includeInternalSymbols: IncludeInternals);
