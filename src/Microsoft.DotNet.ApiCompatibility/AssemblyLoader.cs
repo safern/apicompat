@@ -11,7 +11,8 @@ namespace Microsoft.DotNet.ApiCompatibility
 {
     public class AssemblyLoader
     {
-        private readonly HashSet<string> _dependencyDirectories = new();
+        private readonly HashSet<string> _referenceSearchPaths = new();
+        private readonly List<string> _warnings = new();
         private readonly Dictionary<string, MetadataReference> _loadedAssemblies;
         private readonly bool _resolveReferences;
         private CSharpCompilation _cSharpCompilation;
@@ -29,18 +30,24 @@ namespace Microsoft.DotNet.ApiCompatibility
             _resolveReferences = resolveAssemblyReferences;
         }
 
-        public void AddDependencyPaths(string paths) => AddDependencyPaths(SplitPaths(paths));
+        public void AddReferenceSearchDirectories(string paths) => AddReferenceSearchDirectories(SplitPaths(paths));
 
-        public void AddDependencyPaths(IEnumerable<string> paths)
+        public void AddReferenceSearchDirectories(IEnumerable<string> paths)
         {
             foreach (string path in paths)
-                _dependencyDirectories.Add(path);
+                _referenceSearchPaths.Add(path);
         }
 
-        public bool HasDiagnostics(out IEnumerable<Diagnostic> diagnostics)
+        public bool HasRoslynDiagnostics(out IEnumerable<Diagnostic> diagnostics)
         {
             diagnostics = _cSharpCompilation.GetDiagnostics();
             return diagnostics.Any();
+        }
+
+        public bool HasLoadWarnings(out IEnumerable<string> warnings)
+        {
+            warnings = _warnings;
+            return _warnings.Count > 0;
         }
 
         private static string[] SplitPaths(string paths) =>
@@ -124,7 +131,10 @@ namespace Microsoft.DotNet.ApiCompatibility
                     }
                 }
 
-                // TODO: check if found and log error
+                if (!found)
+                {
+                    throw new Exception($"Could not find matching assembly: '{name}' in any of the search directories.");
+                }
             }
 
             return matchingAssemblies;
@@ -136,16 +146,24 @@ namespace Microsoft.DotNet.ApiCompatibility
             foreach (string path in paths)
             {
                 string resolvedPath = Environment.ExpandEnvironmentVariables(path);
+                string directory = null;
                 if (Directory.Exists(resolvedPath))
                 {
-                    _dependencyDirectories.Add(resolvedPath);
+                    directory = resolvedPath;
                     result.AddRange(LoadAssembliesFromDirectory(resolvedPath));
                 }
                 else if (File.Exists(resolvedPath))
                 {
-                    _dependencyDirectories.Add(Path.GetDirectoryName(resolvedPath));
+                    directory = Path.GetDirectoryName(resolvedPath);
                     result.Add(CreateMetadataReferenceIfNeeded(resolvedPath));
                 }
+                else
+                {
+                    _warnings.Add($"Could not find the provided path '{resolvedPath}' to load binaries from.");
+                }
+
+                if (_resolveReferences && !string.IsNullOrEmpty(directory))
+                    _referenceSearchPaths.Add(directory);
             }
 
             return result;
@@ -192,22 +210,27 @@ namespace Microsoft.DotNet.ApiCompatibility
             {
                 AssemblyReference reference = reader.GetAssemblyReference(handle);
                 string name = $"{reader.GetString(reference.Name)}.dll";
-                if (!_loadedAssemblies.TryGetValue(name, out MetadataReference _))
+                bool found = _loadedAssemblies.TryGetValue(name, out MetadataReference _);
+                if (!found)
                 {
-                    foreach (string directory in _dependencyDirectories)
+                    foreach (string directory in _referenceSearchPaths)
                     {
                         string potentialPath = Path.Combine(directory, name);
                         if (File.Exists(potentialPath))
                         {
-                            // TODO: add version check?
+                            // TODO: add version check and add a warning if it doesn't match?
                             CreateAndAddReferenceToCompilation(name, potentialPath);
+                            found = true;
                             break;
                         }
                     }
                 }
-            }
 
-            // TODO: log error, couldn't resolve reference should accept an option to ignore missing references.
+                if (!found)
+                {
+                    _warnings.Add($"Could not resolve reference '{name}' in any of the provided search directories.");
+                }
+            }
         }
     }
 }
