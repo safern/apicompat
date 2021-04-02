@@ -7,7 +7,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 {
     public class AssemblySetMapper : ElementMapper<IEnumerable<IAssemblySymbol>>
     {
-        private Dictionary<string, AssemblyMapper> _assemblies;
+        private Dictionary<IAssemblySymbol, AssemblyMapper> _assemblies;
 
         public AssemblySetMapper(DiffingSettings settings) : base(settings) { }
 
@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
         {
             if (_assemblies == null)
             {
-                _assemblies = new Dictionary<string, AssemblyMapper>();
+                _assemblies = new Dictionary<IAssemblySymbol, AssemblyMapper>(Settings.EqualityComparer);
 
                 if (Left != null)
                 {
@@ -31,10 +31,10 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
                 {
                     foreach (IAssemblySymbol assembly in elements)
                     {
-                        if (!_assemblies.TryGetValue(assembly.Name, out AssemblyMapper mapper))
+                        if (!_assemblies.TryGetValue(assembly, out AssemblyMapper mapper))
                         {
                             mapper = new AssemblyMapper(Settings);
-                            _assemblies.Add(assembly.Name, mapper);
+                            _assemblies.Add(assembly, mapper);
                         }
                         mapper.AddElement(assembly, index);
                     }
