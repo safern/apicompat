@@ -97,16 +97,16 @@ namespace Microsoft.DotNet.ApiCompatibility.Tasks
                 }
             }
 
-            AssemblyLoader leftLoader;
+            AssemblySymbolLoader leftLoader;
             if (LeftPaths != null)
             {
-                leftLoader = new AssemblyLoader(resolveAssemblyReferences: ShouldResolveAssemblyReferences);
+                leftLoader = new AssemblySymbolLoader(resolveAssemblyReferences: ShouldResolveAssemblyReferences);
                 leftLoader.AddReferenceSearchDirectories(rightDependsOnDirs);
                 leftSymbols = leftLoader.LoadAssemblies(LeftPaths);
             }
             else
             {
-                leftLoader = new AssemblyLoader(AssemblyName);
+                leftLoader = new AssemblySymbolLoader(AssemblyName);
                 leftSymbols = new[]
                 {
                     leftLoader.LoadAssemblyFromFiles(LeftSourcesPath, RightDependsOn),
@@ -114,7 +114,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Tasks
                 ValidateMatchingAssemblyIdentities = false; // in memory assembly might not match identities
             }
 
-            AssemblyLoader rightLoader = new(resolveAssemblyReferences: ShouldResolveAssemblyReferences);
+            AssemblySymbolLoader rightLoader = new(resolveAssemblyReferences: ShouldResolveAssemblyReferences);
             rightLoader.AddReferenceSearchDirectories(RightDependsOn ?? Array.Empty<string>());
             IEnumerable<IAssemblySymbol> rightSymbols = rightLoader.LoadMatchingAssemblies(leftSymbols, RightDirectories, validateMatchingIdentity: ValidateMatchingAssemblyIdentities);
 
