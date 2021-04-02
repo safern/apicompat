@@ -9,7 +9,7 @@ using System.Reflection.PortableExecutable;
 
 namespace Microsoft.DotNet.ApiCompatibility
 {
-    public class AssemblyLoader
+    public class AssemblySymbolLoader
     {
         private readonly HashSet<string> _referenceSearchPaths = new();
         private readonly List<string> _warnings = new();
@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.ApiCompatibility
         private readonly bool _resolveReferences;
         private CSharpCompilation _cSharpCompilation;
 
-        public AssemblyLoader(string assemblyName = "", bool resolveAssemblyReferences = false)
+        public AssemblySymbolLoader(string assemblyName = "", bool resolveAssemblyReferences = false)
         {
             if (string.IsNullOrEmpty(assemblyName))
             {
