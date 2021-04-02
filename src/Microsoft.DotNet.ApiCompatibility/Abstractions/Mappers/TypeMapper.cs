@@ -5,8 +5,8 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 {
     public class TypeMapper : ElementMapper<ITypeSymbol>
     {
-        private Dictionary<string, TypeMapper> _nestedTypes;
-        private Dictionary<string, MemberMapper> _members;
+        private Dictionary<ITypeSymbol, TypeMapper> _nestedTypes;
+        private Dictionary<ISymbol, MemberMapper> _members;
 
         public TypeMapper(DiffingSettings settings) : base(settings) { }
 
@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
         {
             if (_nestedTypes == null)
             {
-                _nestedTypes = new Dictionary<string, TypeMapper>();
+                _nestedTypes = new Dictionary<ITypeSymbol, TypeMapper>(Settings.EqualityComparer);
 
                 if (Left != null)
                 {
@@ -34,10 +34,10 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
                     {
                         if (Settings.Filter.Include(nestedType))
                         {
-                            if (!_nestedTypes.TryGetValue(nestedType.Name, out TypeMapper mapper))
+                            if (!_nestedTypes.TryGetValue(nestedType, out TypeMapper mapper))
                             {
                                 mapper = new TypeMapper(Settings);
-                                _nestedTypes.Add(nestedType.Name, mapper);
+                                _nestedTypes.Add(nestedType, mapper);
                             }
                             mapper.AddElement(nestedType, index);
                         }
@@ -52,7 +52,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
         {
             if (_members == null)
             {
-                _members = new Dictionary<string, MemberMapper>();
+                _members = new Dictionary<ISymbol, MemberMapper>(Settings.EqualityComparer);
 
                 if (Left != null)
                 {
@@ -70,11 +70,10 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
                     {
                         if (Settings.Filter.Include(member) && member is not ITypeSymbol)
                         {
-                            string displayString = member.ToDisplayString();
-                            if (!_members.TryGetValue(displayString, out MemberMapper mapper))
+                            if (!_members.TryGetValue(member, out MemberMapper mapper))
                             {
                                 mapper = new MemberMapper(Settings);
-                                _members.Add(displayString, mapper);
+                                _members.Add(member, mapper);
                             }
                             mapper.AddElement(member, index);
                         }

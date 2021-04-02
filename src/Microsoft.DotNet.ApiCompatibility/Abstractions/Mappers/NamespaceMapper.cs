@@ -7,7 +7,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 {
     public class NamespaceMapper : ElementMapper<INamespaceSymbol>
     {
-        private Dictionary<string, TypeMapper> _types;
+        private Dictionary<ITypeSymbol, TypeMapper> _types;
         private IEnumerable<INamedTypeSymbol> _leftForwardedTypes;
         private IEnumerable<INamedTypeSymbol> _rightForwardedTypes;
 
@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
         {
             if (_types == null)
             {
-                _types = new Dictionary<string, TypeMapper>();
+                _types = new Dictionary<ITypeSymbol, TypeMapper>(Settings.EqualityComparer);
                 IEnumerable<ITypeSymbol> types;
 
                 if (Left != null)
@@ -41,10 +41,10 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
                     {
                         if (Settings.Filter.Include(type))
                         {
-                            if (!_types.TryGetValue(type.Name, out TypeMapper mapper))
+                            if (!_types.TryGetValue(type, out TypeMapper mapper))
                             {
                                 mapper = new TypeMapper(Settings);
-                                _types.Add(type.Name, mapper);
+                                _types.Add(type, mapper);
                             }
 
                             mapper.AddElement(type, index);

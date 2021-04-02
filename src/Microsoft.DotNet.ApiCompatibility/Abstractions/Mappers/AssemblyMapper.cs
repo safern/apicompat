@@ -7,7 +7,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
 {
     public class AssemblyMapper : ElementMapper<IAssemblySymbol>
     {
-        private Dictionary<string, NamespaceMapper> _namespaces;
+        private Dictionary<INamespaceSymbol, NamespaceMapper> _namespaces;
 
         public AssemblyMapper(DiffingSettings settings) : base(settings) { }
 
@@ -15,17 +15,17 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
         {
             if (_namespaces == null)
             {
-                _namespaces = new Dictionary<string, NamespaceMapper>();
-                Dictionary<string, List<INamedTypeSymbol>> typeForwards;
+                _namespaces = new Dictionary<INamespaceSymbol, NamespaceMapper>(Settings.EqualityComparer);
+                Dictionary<INamespaceSymbol, List<INamedTypeSymbol>> typeForwards;
                 if (Left != null)
                 {
-                    typeForwards = ResolveTypeForwards(Left);
+                    typeForwards = ResolveTypeForwards(Left, Settings.EqualityComparer);
                     AddOrCreateMappers(Left.GlobalNamespace, 0);
                 }
 
                 if (Right != null)
                 {
-                    typeForwards = ResolveTypeForwards(Right);
+                    typeForwards = ResolveTypeForwards(Right, Settings.EqualityComparer);
                     AddOrCreateMappers(Right.GlobalNamespace, 1);
                 }
 
@@ -36,13 +36,12 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
                     while (stack.Count > 0)
                     {
                         INamespaceSymbol symbol = stack.Pop();
-                        string name = symbol.ToDisplayString();
-                        if (typeForwards.TryGetValue(name, out List<INamedTypeSymbol> forwardedTypes) || symbol.GetTypeMembers().Length > 0)
+                        if (typeForwards.TryGetValue(symbol, out List<INamedTypeSymbol> forwardedTypes) || symbol.GetTypeMembers().Length > 0)
                         {
-                            if (!_namespaces.TryGetValue(name, out NamespaceMapper mapper))
+                            if (!_namespaces.TryGetValue(symbol, out NamespaceMapper mapper))
                             {
                                 mapper = new NamespaceMapper(Settings);
-                                _namespaces.Add(name, mapper);
+                                _namespaces.Add(symbol, mapper);
                             }
 
                             mapper.AddElement(symbol, index);
@@ -54,18 +53,17 @@ namespace Microsoft.DotNet.ApiCompatibility.Abstractions
                     }
                 }
 
-                static Dictionary<string, List<INamedTypeSymbol>> ResolveTypeForwards(IAssemblySymbol assembly)
+                static Dictionary<INamespaceSymbol, List<INamedTypeSymbol>> ResolveTypeForwards(IAssemblySymbol assembly, IEqualityComparer<ISymbol> comparer)
                 {
-                    Dictionary<string, List<INamedTypeSymbol>> typeForwards = new();
+                    Dictionary<INamespaceSymbol, List<INamedTypeSymbol>> typeForwards = new(comparer);
                     foreach (INamedTypeSymbol symbol in assembly.GetForwardedTypes())
                     {
                         if (symbol.TypeKind != TypeKind.Error)
                         {
-                            string containingNamespace = symbol.ContainingNamespace.ToDisplayString();
-                            if (!typeForwards.TryGetValue(containingNamespace, out List<INamedTypeSymbol> types))
+                            if (!typeForwards.TryGetValue(symbol.ContainingNamespace, out List<INamedTypeSymbol> types))
                             {
                                 types = new List<INamedTypeSymbol>();
-                                typeForwards.Add(containingNamespace, types);
+                                typeForwards.Add(symbol.ContainingNamespace, types);
                             }
 
                             types.Add(symbol);
