@@ -60,9 +60,9 @@ namespace Microsoft.DotNet.ApiCompatibility
             IEnumerable<MetadataReference> assembliesToReturn = LoadFromPaths(paths);
 
             List<IAssemblySymbol> result = new List<IAssemblySymbol>();
-            foreach (MetadataReference assembly in assembliesToReturn)
+            foreach (MetadataReference metadataReference in assembliesToReturn)
             {
-                ISymbol symbol = _cSharpCompilation.GetAssemblyOrModuleSymbol(assembly);
+                ISymbol symbol = _cSharpCompilation.GetAssemblyOrModuleSymbol(metadataReference);
                 if (symbol is IAssemblySymbol assemblySymbol)
                 {
                     result.Add(assemblySymbol);
@@ -71,8 +71,39 @@ namespace Microsoft.DotNet.ApiCompatibility
 
             return result;
         }
+
+        public IAssemblySymbol LoadAssembly(string path)
+        {
+            if (path == null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            MetadataReference metadataReference = CreateOrGetMetadataReferenceFromPath(path);
+            return (IAssemblySymbol)_cSharpCompilation.GetAssemblyOrModuleSymbol(metadataReference);
+        }
+
+        public IAssemblySymbol LoadAssembly(string name, Stream stream)
+        {
+            if (name == null)
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
+            if (stream == null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            }
+
+            if (!_loadedAssemblies.TryGetValue(name, out MetadataReference metadataReference))
+            {
+                metadataReference = CreateAndAddReferenceToCompilation(name, stream);
+            }
+
+            return (IAssemblySymbol)_cSharpCompilation.GetAssemblyOrModuleSymbol(metadataReference);
+        }
         
-        public IAssemblySymbol LoadAssemblyFromFiles(IEnumerable<string> filePaths, IEnumerable<string> referencePaths)
+        public IAssemblySymbol LoadAssemblyFromSourceFiles(IEnumerable<string> filePaths, IEnumerable<string> referencePaths)
         {
             if (filePaths == null || filePaths.Count() == 0)
             {
@@ -113,7 +144,7 @@ namespace Microsoft.DotNet.ApiCompatibility
                     string possiblePath = Path.Combine(directory, name);
                     if (File.Exists(possiblePath))
                     {
-                        MetadataReference reference = CreateMetadataReferenceIfNeeded(possiblePath);
+                        MetadataReference reference = CreateOrGetMetadataReferenceFromPath(possiblePath);
                         ISymbol symbol = _cSharpCompilation.GetAssemblyOrModuleSymbol(reference);
                         if (symbol is IAssemblySymbol matchingAssembly)
                         {
@@ -155,7 +186,7 @@ namespace Microsoft.DotNet.ApiCompatibility
                 else if (File.Exists(resolvedPath))
                 {
                     directory = Path.GetDirectoryName(resolvedPath);
-                    result.Add(CreateMetadataReferenceIfNeeded(resolvedPath));
+                    result.Add(CreateOrGetMetadataReferenceFromPath(resolvedPath));
                 }
                 else
                 {
@@ -173,38 +204,38 @@ namespace Microsoft.DotNet.ApiCompatibility
         {
             foreach (string assembly in Directory.EnumerateFiles(directory, "*.dll"))
             {
-                yield return CreateMetadataReferenceIfNeeded(assembly);
+                yield return CreateOrGetMetadataReferenceFromPath(assembly);
             }
         }
 
-        private MetadataReference CreateMetadataReferenceIfNeeded(string assembly)
+        private MetadataReference CreateOrGetMetadataReferenceFromPath(string path)
         {
             // Roslyn doesn't support having two assemblies as references with the same identity and then getting the symbol for it.
-            string name = Path.GetFileName(assembly);
+            string name = Path.GetFileName(path);
             if (!_loadedAssemblies.TryGetValue(name, out MetadataReference metadataReference))
             {
-                metadataReference = CreateAndAddReferenceToCompilation(name, assembly);
+                using FileStream stream = File.OpenRead(path);
+                metadataReference = CreateAndAddReferenceToCompilation(name, stream);
             }
 
             return metadataReference;
         }
 
-        private MetadataReference CreateAndAddReferenceToCompilation(string name, string assemblyPath)
+        private MetadataReference CreateAndAddReferenceToCompilation(string name, Stream fileStream)
         {
-            MetadataReference metadataReference = MetadataReference.CreateFromFile(assemblyPath);
+            MetadataReference metadataReference = MetadataReference.CreateFromStream(fileStream);
             _loadedAssemblies.Add(name, metadataReference);
             _cSharpCompilation = _cSharpCompilation.AddReferences(new MetadataReference[] { metadataReference });
 
             if (_resolveReferences)
-                ResolveReferences(assemblyPath);
+                ResolveReferences(fileStream);
 
             return metadataReference;
         }
 
-        private void ResolveReferences(string assemblyPath)
+        private void ResolveReferences(Stream stream)
         {
-            using Stream fileStream = File.OpenRead(assemblyPath);
-            using PEReader peReader = new(fileStream);
+            using PEReader peReader = new(stream);
             MetadataReader reader = peReader.GetMetadataReader();
             foreach (AssemblyReferenceHandle handle in reader.AssemblyReferences)
             {
@@ -219,7 +250,8 @@ namespace Microsoft.DotNet.ApiCompatibility
                         if (File.Exists(potentialPath))
                         {
                             // TODO: add version check and add a warning if it doesn't match?
-                            CreateAndAddReferenceToCompilation(name, potentialPath);
+                            using FileStream resolvedStream = File.OpenRead(potentialPath);
+                            CreateAndAddReferenceToCompilation(name, resolvedStream);
                             found = true;
                             break;
                         }
