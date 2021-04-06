@@ -109,7 +109,7 @@ namespace Microsoft.DotNet.ApiCompatibility.Tasks
                 leftLoader = new AssemblySymbolLoader(AssemblyName);
                 leftSymbols = new[]
                 {
-                    leftLoader.LoadAssemblyFromFiles(LeftSourcesPath, RightDependsOn),
+                    leftLoader.LoadAssemblyFromSourceFiles(LeftSourcesPath, RightDependsOn),
                 };
                 ValidateMatchingAssemblyIdentities = false; // in memory assembly might not match identities
             }

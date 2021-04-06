@@ -26,11 +26,11 @@ namespace Microsoft.DotNet.ApiCompatibility
 
         public IEnumerable<CompatDifference> GetDifferences(IEnumerable<IAssemblySymbol> left, IEnumerable<IAssemblySymbol> right)
         {
-            AssemblySetMapper mapper = new AssemblySetMapper(_settings);
+            AssemblySetMapper mapper = new(_settings);
             mapper.AddElement(left, 0);
             mapper.AddElement(right, 1);
 
-            DiferenceVisitor visitor = new DiferenceVisitor(noWarn: NoWarn, ignoredDifferences: IgnoredDifferences);
+            DiferenceVisitor visitor = new(noWarn: NoWarn, ignoredDifferences: IgnoredDifferences);
             visitor.Visit(mapper);
             return visitor.Differences;
         }
